@@ -6,7 +6,7 @@ from rich.pretty import pprint
 
 LOCATIONS = paths.locations
 
-streetlevel_base_url = "https://data.police.uk/api/crimes-street/all-crime?"
+STREETLEVEL_BASE_URL = "https://data.police.uk/api/crimes-street/all-crime?"
 
 
 def get_coords(polygon_file: Path) -> str:
@@ -19,6 +19,14 @@ def get_coords(polygon_file: Path) -> str:
     return formatted_coords
 
 
+def construct_url(location_names: list[str]) -> dict[str, str]:
+    location_urls = {
+        key: STREETLEVEL_BASE_URL + get_coords(LOCATIONS / (key + ".geojson"))
+        for key in location_names
+    }
+    return location_urls
+
+
 def main():
     constituencies = [
         "bristol_east",
@@ -27,11 +35,9 @@ def main():
         "bristol_west",
     ]
 
-    constituency_coords = {
-        key: get_coords(LOCATIONS / (key + ".geojson")) for key in constituencies
-    }
+    constituency_urls = construct_url(constituencies)
 
-    pprint(constituency_coords)
+    pprint(constituency_urls)
 
 
 if __name__ == "__main__":
