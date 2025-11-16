@@ -18,11 +18,12 @@ def get_coords(polygon_file: Path) -> str:
     coords = polygon["coordinates"][0]
     logger.debug(f"coords created, length={len(coords)}")
 
-    # round to 3 digits - getting 414 error with full length. Then, use set so coords are unique when less precise.
-    # 3 decimal points gives precision of about 100 metres
-    # chooseing to keep only every fourth coord to further reduce list
+    # ~~round to 3 digits - getting 414 error with full length. Then, use set so coords are unique when less precise.~~
+    # rount to 4 digits - give precision of about 10 metres
+    # ~~3 decimal points gives precision of about 100 metres~~
+    # chooseing to keep only every ~~fourth~~ second coord to further reduce list
     # also, we are swapping over the coordinates - geojson stores coords in long, lat format, api takes lat, long points
-    aprox_coords = list({(round(lat, 3), round(long, 3)) for long, lat in coords})[::4]
+    aprox_coords = list({(round(lat, 4), round(long, 4)) for long, lat in coords})[::2]
     logger.debug(f"aprox coords created, length={len(aprox_coords)}")
 
     formatted_coords = ":".join(
@@ -40,37 +41,38 @@ def construct_url(location_names: list[str]) -> dict[str, str]:
     return location_urls
 
 
-def make_request(url: str) -> None:
+def make_request(url: str) -> list[dict]:
     response = requests.get(url=url)
 
     print(f"status code: {response.status_code}")
 
     if response.status_code == 200:
-        print("\n\n")
-        print("response:")
-        pprint(response.text)
-        print("\n", "=" * 80, "\n")
-
-        print("json:", "\n")
-        print(response.json())
+        return response.json()
+    else:
+        raise requests.HTTPError
 
 
 def main():
-    constituencies = [
-        "bristol_east",
-        "bristol_north",
-        "bristol_south",
-        "bristol_west",
+    lsoas = [
+        "bristol_" + code
+        for code in [
+            "021A",
+            "023A",
+            "023B",
+            "023C",
+            "023D",
+            "024F",
+            "024G",
+            "031B",
+        ]
     ]
 
-    constituency_urls = construct_url(constituencies)
+    lsoa_urls = construct_url(lsoas)
 
-    # pprint(constituency_urls)
+    data = {constituency: make_request(url) for constituency, url in lsoa_urls.items()}
 
-    for const, url in constituency_urls.items():
-        print("*" * 80, "\n\n")
-        print(const)
-        make_request(url)
+    if data:
+        pprint(data)
 
 
 if __name__ == "__main__":

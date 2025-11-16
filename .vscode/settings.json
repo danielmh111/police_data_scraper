@@ -5,9 +5,8 @@
         "editor.formatOnSave": true,
         "editor.wordBasedSuggestions": "off",
         "editor.codeActionsOnSave": {
-            "source.fixAll.ruff": "always",
             "source.organizeImports.ruff": "always",
-            "source.unusedImports": "never",
+            "source.unusedImports": "never"
         }
     }
 }
