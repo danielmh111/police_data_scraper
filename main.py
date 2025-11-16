@@ -18,10 +18,8 @@ def get_coords(polygon_file: Path) -> str:
     coords = polygon["coordinates"][0]
     logger.debug(f"coords created, length={len(coords)}")
 
-    # ~~round to 3 digits - getting 414 error with full length. Then, use set so coords are unique when less precise.~~
     # rount to 4 digits - give precision of about 10 metres
-    # ~~3 decimal points gives precision of about 100 metres~~
-    # chooseing to keep only every ~~fourth~~ second coord to further reduce list
+    # chooseing to keep only every second coord to further reduce list
     # also, we are swapping over the coordinates - geojson stores coords in long, lat format, api takes lat, long points
     aprox_coords = list({(round(lat, 4), round(long, 4)) for long, lat in coords})[::2]
     logger.debug(f"aprox coords created, length={len(aprox_coords)}")
@@ -52,23 +50,15 @@ def make_request(url: str) -> list[dict]:
         raise requests.HTTPError
 
 
+def find_lsoas() -> list[str]:
+    files = LOCATIONS.iterdir()
+    names = [file.parts[-1].removesuffix(".geojson") for file in files]
+    return names
+
+
 def main():
-    lsoas = [
-        "bristol_" + code
-        for code in [
-            "021A",
-            "023A",
-            "023B",
-            "023C",
-            "023D",
-            "024F",
-            "024G",
-            "031B",
-        ]
-    ]
-
+    lsoas = [find_lsoas()[0]]
     lsoa_urls = construct_url(lsoas)
-
     data = {constituency: make_request(url) for constituency, url in lsoa_urls.items()}
 
     if data:
