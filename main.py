@@ -21,7 +21,8 @@ def get_coords(polygon_file: Path) -> str:
     # round to 3 digits - getting 414 error with full length. Then, use set so coords are unique when less precise.
     # 3 decimal points gives precision of about 100 metres
     # chooseing to keep only every fourth coord to further reduce list
-    aprox_coords = list({(round(lat, 3), round(long, 3)) for lat, long in coords})[::4]
+    # also, we are swapping over the coordinates - geojson stores coords in long, lat format, api takes lat, long points
+    aprox_coords = list({(round(lat, 3), round(long, 3)) for long, lat in coords})[::4]
     logger.debug(f"aprox coords created, length={len(aprox_coords)}")
 
     formatted_coords = ":".join(
