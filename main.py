@@ -7,6 +7,7 @@ import polars as pl
 import requests
 from loguru import logger
 from project_paths import paths
+from ratelimit import limits
 from rich.pretty import pprint
 
 LOCATIONS = paths.locations
@@ -59,13 +60,12 @@ def construct_url(location_names: list[str], dates: list[str]) -> list[tuple[str
     return location_urls
 
 
+@limits(calls=15, period=1)
 def make_request(url: str) -> list[dict] | None:
     try:
         response = requests.get(url=url)
     except requests.HTTPError:
         return None
-    finally:
-        time.sleep(0.25)
 
     logger.debug(f"status code: {response.status_code}")
 
