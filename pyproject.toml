@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "loguru>=0.7.3",
+    "polars>=1.35.2",
     "project-paths>=1.1.1",
     "requests>=2.32.5",
     "rich>=14.2.0",
