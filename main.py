@@ -34,17 +34,28 @@ def get_coords(polygon_file: Path) -> str:
     # rount to 4 digits - give precision of about 10 metres
     # chooseing to keep only every second coord to further reduce list
     # also, we are swapping over the coordinates - geojson stores coords in long, lat format, api takes lat, long points
-    aprox_coords = list({(round(lat, 4), round(long, 4)) for long, lat in coords})[::2]
-    logger.debug(f"aprox coords created, length={len(aprox_coords)}")
+
+    aprox_coords = [(round(lat, 4), round(long, 4)) for long, lat in coords]
+    sampled_coords = aprox_coords[::2]
+    deduped_coords = list(
+        dict.fromkeys(sampled_coords)
+    )  # dedupes but keeps order - crucial for polygon
+
+    logger.debug(f"aprox coords created, length={len(deduped_coords)}")
 
     formatted_coords = ":".join(
-        [str(lon) + "," + str(lat) for lon, lat in aprox_coords]
+        [str(lon) + "," + str(lat) for lon, lat in deduped_coords]
     )
 
     return formatted_coords
 
 
 def construct_url(location_names: list[str], dates: list[str]) -> list[tuple[str, str]]:
+    location_coords = {
+        location_name: get_coords(LOCATIONS / (location_name + ".geojson"))
+        for location_name in location_names
+    }
+
     params = product(dates, location_names)
 
     location_urls = [
@@ -54,7 +65,7 @@ def construct_url(location_names: list[str], dates: list[str]) -> list[tuple[str
             + "?date="
             + month
             + "&poly="
-            + get_coords(LOCATIONS / (location_name + ".geojson")),
+            + location_coords.get(location_name, ""),
         )
         for month, location_name in params
     ]
@@ -66,10 +77,11 @@ def make_request(url: str, session: requests.Session) -> list[dict]:
     response = session.get(url=url)
     logger.debug(f"status code: {response.status_code}")
 
-    if response.status_code != 200:
-        logger.warning(f"{response.status_code} returned for {url}")
     if response.status_code == 404:
         return []  # return empty list - no crimes reported
+    if response.status_code != 200:
+        logger.warning(f"{response.status_code} returned for {url}")
+        response.raise_for_status()
 
     return response.json()
 
@@ -108,6 +120,7 @@ def main():
         total=3,
         status_forcelist=[429, 500],
         backoff_factor=1,
+        respect_retry_after_header=True,
     )
     with requests.Session() as session:
         session.mount("https://", HTTPAdapter(max_retries=retry_logic))
