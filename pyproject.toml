@@ -11,6 +11,7 @@ dependencies = [
     "ratelimit>=2.2.1",
     "requests>=2.32.5",
     "rich>=14.2.0",
+    "shapely>=2.1.2",
 ]
 
 [tool.project-paths]

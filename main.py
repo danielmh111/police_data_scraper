@@ -9,6 +9,7 @@ from project_paths import paths
 from ratelimit import limits
 from requests.adapters import HTTPAdapter
 from rich.pretty import pprint
+from shapely.geometry import Polygon
 from urllib3.util.retry import Retry
 
 LOCATIONS = paths.locations
@@ -25,6 +26,12 @@ def generate_months() -> list[str]:
     return dates
 
 
+def format_coordinates(shape: Polygon) -> str:
+    coords = list(shape.exterior.coords)
+    formatted_coords = ":".join([str(lon) + "," + str(lat) for lon, lat in coords])
+    return formatted_coords
+
+
 def get_coords(polygon_file: Path) -> str:
     with open(polygon_file) as file:
         polygon = json.load(file)
@@ -32,21 +39,24 @@ def get_coords(polygon_file: Path) -> str:
     coords = polygon["coordinates"][0]
     logger.debug(f"coords created, length={len(coords)}")
 
-    # rount to 4 digits - give precision of about 10 metres
-    # chooseing to keep only every second coord to further reduce list
+    # round to 5 digits - give precision of about 1 metres
     # also, we are swapping over the coordinates - geojson stores coords in long, lat format, api takes lat, long points
-
-    aprox_coords = [(round(lat, 4), round(long, 4)) for long, lat in coords]
-    sampled_coords = aprox_coords[::3]
+    aprox_coords = [(round(lat, 5), round(long, 5)) for long, lat in coords]
     deduped_coords = list(
-        dict.fromkeys(sampled_coords)
+        dict.fromkeys(aprox_coords)
     )  # dedupes but keeps order - crucial for polygon
 
-    logger.debug(f"aprox coords created, length={len(deduped_coords)}")
+    # using the shapely library to simplify the polygon so that urls dont get so long they raise 414 errors
+    area_polygon = Polygon(aprox_coords)
 
-    formatted_coords = ":".join(
-        [str(lon) + "," + str(lat) for lon, lat in deduped_coords]
-    )
+    formatted_coords = format_coordinates(area_polygon)
+    tolerance = 0.000001
+    while len(formatted_coords) > 300:
+        area_polygon = area_polygon.simplify(tolerance, preserve_topology=True)
+        formatted_coords = format_coordinates(area_polygon)
+        tolerance *= 1.25  # increase by 50% each iteration
+
+    logger.debug(f"simplified coords created, length={len(deduped_coords)}")
 
     return formatted_coords
 
@@ -125,6 +135,9 @@ def aggregate_stats(df: pl.DataFrame) -> pl.DataFrame:
 def main():
     lsoas = find_lsoas()
     lsoa_urls = construct_url(lsoas, generate_months())
+
+    for lsoa_url in lsoa_urls:
+        print(len(lsoa_url[1]))
 
     retry_logic = Retry(
         total=3,
