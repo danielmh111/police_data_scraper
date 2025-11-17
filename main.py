@@ -12,6 +12,7 @@ from rich.pretty import pprint
 from urllib3.util.retry import Retry
 
 LOCATIONS = paths.locations
+DATA = paths.data
 
 STREETLEVEL_BASE_URL = "https://data.police.uk/api/crimes-street/all-crime"
 
@@ -113,7 +114,7 @@ def format_data(data: list[dict[str, list[dict]]]) -> pl.DataFrame:
 
 
 def main():
-    lsoas = [find_lsoas()[0]]
+    lsoas = find_lsoas()
     lsoa_urls = construct_url(lsoas, generate_months())
 
     retry_logic = Retry(
@@ -129,9 +130,7 @@ def main():
         ]
 
     crimes_df = format_data(data)
-    print(crimes_df)
-
-    print(crimes_df.select("month").n_unique())
+    crimes_df.write_csv(DATA / "lsoa_crimes")
 
 
 if __name__ == "__main__":

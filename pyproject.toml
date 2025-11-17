@@ -15,3 +15,4 @@ dependencies = [
 
 [tool.project-paths]
 locations = "./location_polygons"
+data = "./data"
