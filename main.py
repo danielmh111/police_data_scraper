@@ -136,9 +136,6 @@ def main():
     lsoas = find_lsoas()
     lsoa_urls = construct_url(lsoas, generate_months())
 
-    for lsoa_url in lsoa_urls:
-        print(len(lsoa_url[1]))
-
     retry_logic = Retry(
         total=3,
         status_forcelist=[429, 500],
