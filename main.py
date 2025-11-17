@@ -1,5 +1,4 @@
 import json
-import time
 from itertools import product
 from pathlib import Path
 
@@ -8,7 +7,9 @@ import requests
 from loguru import logger
 from project_paths import paths
 from ratelimit import limits
+from requests.adapters import HTTPAdapter
 from rich.pretty import pprint
+from urllib3.util.retry import Retry
 
 LOCATIONS = paths.locations
 
@@ -61,18 +62,16 @@ def construct_url(location_names: list[str], dates: list[str]) -> list[tuple[str
 
 
 @limits(calls=15, period=1)
-def make_request(url: str) -> list[dict] | None:
-    try:
-        response = requests.get(url=url)
-    except requests.HTTPError:
-        return None
-
+def make_request(url: str, session: requests.Session) -> list[dict]:
+    response = session.get(url=url)
     logger.debug(f"status code: {response.status_code}")
 
-    if response.status_code == 200:
-        return response.json()
-    elif response.status_code == 404:
-        logger.warning(f"404 status returned for {url}")
+    if response.status_code != 200:
+        logger.warning(f"{response.status_code} returned for {url}")
+    if response.status_code == 404:
+        return []  # return empty list - no crimes reported
+
+    return response.json()
 
 
 def find_lsoas() -> list[str]:
@@ -104,10 +103,17 @@ def format_data(data: list[dict[str, list[dict]]]) -> pl.DataFrame:
 def main():
     lsoas = [find_lsoas()[0]]
     lsoa_urls = construct_url(lsoas, generate_months())
-    data: list[dict[str, list]] = [
-        {lsoa: (make_request(url) or [])} for lsoa, url in lsoa_urls
-    ]
-    pprint(data)
+
+    retry_logic = Retry(
+        total=3,
+        status_forcelist=[429, 500],
+        backoff_factor=1,
+    )
+    with requests.Session() as session:
+        session.mount("https://", HTTPAdapter(max_retries=retry_logic))
+        data: list[dict[str, list]] = [
+            {lsoa: (make_request(url, session))} for lsoa, url in lsoa_urls
+        ]
 
     crimes_df = format_data(data)
     print(crimes_df)
