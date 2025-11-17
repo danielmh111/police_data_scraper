@@ -37,7 +37,7 @@ def get_coords(polygon_file: Path) -> str:
     # also, we are swapping over the coordinates - geojson stores coords in long, lat format, api takes lat, long points
 
     aprox_coords = [(round(lat, 4), round(long, 4)) for long, lat in coords]
-    sampled_coords = aprox_coords[::2]
+    sampled_coords = aprox_coords[::3]
     deduped_coords = list(
         dict.fromkeys(sampled_coords)
     )  # dedupes but keeps order - crucial for polygon
@@ -106,11 +106,20 @@ def format_data(data: list[dict[str, list[dict]]]) -> pl.DataFrame:
         if crimes != []
     ]
 
-    pprint(flat_data)
-
     crimes_df = pl.DataFrame(flat_data)
     crimes_df = crimes_df.select(["lsoa", "month", "category", "status"])
     return crimes_df
+
+
+def aggregate_stats(df: pl.DataFrame) -> pl.DataFrame:
+    df = (
+        df.select(["lsoa", "month", "category"])
+        .group_by(["lsoa", "month", "category"])
+        .len()
+        .rename({"len": "count"})
+    )
+    print(df)
+    return df
 
 
 def main():
@@ -131,6 +140,9 @@ def main():
 
     crimes_df = format_data(data)
     crimes_df.write_csv(DATA / "lsoa_crimes")
+
+    crime_stats_df = aggregate_stats(crimes_df)
+    crime_stats_df.write_csv(DATA / "lsoa_crime_stats.csv")
 
 
 if __name__ == "__main__":
