@@ -17,3 +17,8 @@ dependencies = [
 [tool.project-paths]
 locations = "./location_polygons"
 data = "./data"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.5",
+]

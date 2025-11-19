@@ -8,7 +8,6 @@ from loguru import logger
 from project_paths import paths
 from ratelimit import limits
 from requests.adapters import HTTPAdapter
-from rich.pretty import pprint
 from shapely.geometry import Polygon
 from urllib3.util.retry import Retry
 
