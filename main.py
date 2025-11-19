@@ -51,8 +51,8 @@ def format_coordinates(shape: Polygon) -> str:
     Params:
         shape (shapely.Polygon): the geometry of the custom area. Create a polygon using the shapely library and teh longitude-latitude coordinate pairs.
 
-    REturns::
-        coordinates  (str): coordinates formatted to be included as a request parameter
+    Returns::
+        coordinates (str): coordinates formatted to be included as a request parameter
     """
     coords = list(shape.exterior.coords)
     formatted_coords = ":".join([str(lon) + "," + str(lat) for lon, lat in coords])
@@ -153,9 +153,9 @@ def make_request(url: str, session: requests.Session) -> list[dict]:
         url (str): the url to request data from
 
     Raises:
-        HTTPError: if one occurs, it is raises unless the status code is 200 or 404
+        HTTPError: raised for http error status codes unless the status code is 404
 
-    Retunrs:
+    Returns:
         data (list of dicts): deserialized json response - a list of a dictionary for each crime, or an empty dictionary if a 404 error occured (api has archived that month)
     """
     response = session.get(url=url)
@@ -192,7 +192,7 @@ def format_data(data: list[dict[str, list[dict]]]) -> pl.DataFrame:
 
     take the data returned from all api calls and create a dataframe
 
-    params:
+    Params:
         data (list of dicts of strs and lists of dicts (sorry)): the data structure created by making all the api requests
 
     Returns:
